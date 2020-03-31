@@ -20,13 +20,13 @@ import com.csye6225.fall2018.courseservice.Service.ProfessorService;
 //.. /webapi/myresource
 @Path("professors")
 public class ProfessorResource {
-ProfessorService profService = new ProfessorService();
+	ProfessorService profService = new ProfessorService();
 	
 	@GET
 //	@Path("/all")
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<Professor> getProfessors() {
-		return profService.getAllProfessors();
+		return profService.getAllProfessors();    
 	}
 	
 	@GET
@@ -49,12 +49,11 @@ ProfessorService profService = new ProfessorService();
 	}
 	
 	@DELETE
-	@Path("/delete/{professorId}")
+	@Path("/{professorId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Professor deleteProfessor(@PathParam("professorId") String profId) throws Exception {
 		return profService.deleteProfessor(profId);
 	}
-	
 	
 	 @POST
 	 @Path("/add")

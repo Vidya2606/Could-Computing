@@ -4,47 +4,52 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.csye6225.fall2018.courseservice.DataBase.CourseDB;
 import com.csye6225.fall2018.courseservice.DataBase.ProgramDB;
 import com.csye6225.fall2018.courseservice.Exceptions.InvalidParameterException;
 import com.csye6225.fall2018.courseservice.Exceptions.ResourseNotFoundException;
 import com.csye6225.fall2018.courseservice.Model.Course;
+import com.csye6225.fall2018.courseservice.Model.DynamoDbConnector;
 import com.csye6225.fall2018.courseservice.Model.Program;
 
 public class CourseService {
-	public HashMap<String, Course> courseMap = CourseDB.getCourseDB();
-	public HashMap<String, Program> progMap = ProgramDB.getProgramDB();
-	static String coursePrefix = "course";
+	static HashMap<String, Course> courseMap = CourseDB.getCourseDB();
+	static HashMap<String, Program> progMap = ProgramDB.getProgramDB();
+	static DynamoDbConnector dynamoDb;
+	DynamoDBMapper mapper;
+	String coursePrefix = "course";
 	
-	public CourseService() {	
+	public CourseService() {
+		dynamoDb = new DynamoDbConnector();
+		DynamoDbConnector.init();
+		mapper = new DynamoDBMapper(dynamoDb.getClient());
 	}
 	
 	//Getting list of all courses
 	public List<Course> getAllCourses(){
-		ArrayList<Course> list = new ArrayList<>();
-		for(Course cour: courseMap.values()) {
-			list.add(cour);
-		}
-		return list;
+		initDDBConnectors();
+		List<Course> allCourses = mapper.scan(Course.class, new DynamoDBScanExpression());
+		return allCourses;
 	}
 	
 	//Adding a course
 	public Course addCourse(String courseName, String noOfCredits, String progID) throws Exception {
-		validateProgram(progID);
+		Program prog = getAndValidateProgram(progID);
+		initDDBConnectors();
 		String courseId = ServiceUtils.generateID(coursePrefix);
-		Course cour = new Course(courseId, courseName, noOfCredits, progID);
+		Course course = new Course(courseId, courseName, noOfCredits, progID);
 		//Store the course
-		courseMap.put(courseId, cour);
+		mapper.save(course);
 		
 		// Store course id in prog
-		Program prog = progMap.get(progID);
 		List<String> courseInProg = prog.getCourses();
 		courseInProg.add(courseName);
 		prog.setCourses(courseInProg);
-		progMap.put(progID, prog);
-
+		mapper.save(prog);
 		//Return new course
-		return cour;
+		return course;
 	}
 	
 	public Course addCourse(Course cour) throws Exception {
@@ -53,37 +58,34 @@ public class CourseService {
 	
 	//Getting one course
 	public Course getCourse(String courseID) throws Exception {
-		validateCourse(courseID);
-		Course cours = courseMap.get(courseID);
-		return cours;
+		initDDBConnectors();
+		return getAndValidateCourse(courseID);
 	}
 	
 	//Deleting a Course
 	public Course deleteCourse(String courseID) throws Exception {
-		validateCourse(courseID);
-		Course deletedCourseDetails = courseMap.get(courseID);
-		courseMap.remove(courseID);
+		Course deletedCourseDetails = getAndValidateCourse(courseID);
+		mapper.delete(deletedCourseDetails);
 		return deletedCourseDetails;
 	}
 	
 	//Updating course Info
-	public Course updateCourseInformation(String courseID, Course cours) throws Exception {
-		validateCourse(courseID);
-		if(cours.getCourseName() == null || cours.getCourseName().length() < 1) {
+	public Course updateCourseInformation(String courseID, Course course) throws Exception {
+		Course courseToUpdate = getAndValidateCourse(courseID);
+		if(course.getCourseName() == null || course.getCourseName().length() < 1) {
 			throw new InvalidParameterException("Course name is invalid.");
 		}
-		Course courseToUpdate = courseMap.get(courseID);
-		courseToUpdate.setCourseName(cours.getCourseName());
-		courseMap.put(courseID, courseToUpdate);
+		courseToUpdate.setCourseName(course.getCourseName());
+		mapper.save(courseToUpdate);
 		return courseToUpdate;
 	}
 	
-
-	//Get Course in a program 
+	//Get Course in a program
 	public List<Course> getCoursesByProgram(String progID) {	
 		//Getting the list
 		ArrayList<Course> list = new ArrayList<>();
-		for (Course cour : courseMap.values()) {	
+		List<Course> allCourses = getAllCourses();
+		for (Course cour : allCourses) {	
 		if (cour.getProgID().equals(progID)) {
 				list.add(cour);
 			}
@@ -91,15 +93,29 @@ public class CourseService {
 		return list ;
 	}
 	
-	private void validateProgram(String programID) throws Exception {
-		if (progMap == null || !progMap.containsKey(programID)) {
-			throw new ResourseNotFoundException("programID: " + programID + " was not found.");
+	private Program getAndValidateProgram(String programID) throws Exception {
+		initDDBConnectors();
+		Program prog = mapper.load(Program.class, programID);
+		if (prog == null) {
+			throw new ResourseNotFoundException("programID: " + programID + " not found.");
 		}
+		return prog;
 	}
 	
-	private void validateCourse(String courseID) throws Exception {
-		if (courseMap == null || !courseMap.containsKey(courseID)) {
-			throw new ResourseNotFoundException("courseID: " + courseID + " was not found.");
+	private Course getAndValidateCourse(String courseID) throws Exception {
+		initDDBConnectors();
+		Course course = mapper.load(Course.class, courseID);
+		if (course == null) {
+			throw new ResourseNotFoundException("courseID: " + courseID + " not found.");
+		}
+		return course;
+	}
+	
+	private void initDDBConnectors() {
+		if (dynamoDb == null || mapper == null) {
+		    dynamoDb = new DynamoDbConnector();
+		    DynamoDbConnector.init();
+		    mapper = new DynamoDBMapper(dynamoDb.getClient());
 		}
 	}
 }

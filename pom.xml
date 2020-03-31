@@ -34,8 +34,16 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-bom</artifactId>
+      <version>1.11.327</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
         </dependencies>
     </dependencyManagement>
+    
 
     <dependencies>
         <dependency>
@@ -64,6 +72,14 @@
     <artifactId>activation</artifactId>
     <version>1.1.1</version>
 </dependency>
+<dependency>
+    <groupId>com.amazonaws</groupId>
+    <artifactId>aws-java-sdk-s3</artifactId>
+  </dependency>
+  <dependency>
+    <groupId>com.amazonaws</groupId>
+    <artifactId>aws-java-sdk-dynamodb</artifactId>
+  </dependency>
     </dependencies>
     <properties>
         <jersey.version>2.16</jersey.version>

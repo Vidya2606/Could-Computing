@@ -1,2 +1,3 @@
 # Could-Computing
-Assignment 
+## Assignment-2
+Uses `DynamoDB` tables to store all Blackboard data. 
